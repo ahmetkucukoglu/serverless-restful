@@ -1,0 +1,141 @@
+service: ads-api
+
+custom:
+  tableName: AdsTable
+
+provider:
+  name: aws
+  runtime: nodejs10.x
+  region: eu-central-1
+  profile: serverlessuser
+  apiKeys:
+    - AdsAPIKey
+  environment:
+    TABLE_NAME: ${self:custom.tableName}
+    REDIS_ENDPOINT:
+      "Fn::GetAtt": AdsRedisCacheCluster.RedisEndpoint.Address
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - "Fn::GetAtt": AdsDynamoDBTable.Arn
+    - Effect: "Allow"
+      Action:
+        - ec2:CreateNetworkInterface
+        - ec2:DescribeNetworkInterfaces
+        - ec2:DeleteNetworkInterface
+      Resource: "*"
+
+functions:
+  create:
+    handler: create.create
+    events:
+      - http:
+          path: api/ads
+          method: post
+          private: true
+          request:
+            schema:
+              application/json: ${file(create_request.json)}
+
+  update:
+    handler: update.update
+    events:
+      - http:
+          path: api/ads/{id}
+          method: put
+          private: true
+          request:
+            schema:
+              application/json: ${file(update_request.json)}
+
+  delete:
+    handler: delete.delete
+    events:
+      - http:
+          path: api/ads/{id}
+          method: delete
+          private: true
+
+  getAll:
+    handler: getAll.getAll
+    vpc:
+      securityGroupIds:
+        - "Fn::GetAtt": AdsRedisSecurityGroup.GroupId
+      subnetIds:
+        - subnet-be77a8c3
+        - subnet-74c04639
+        - subnet-9f7611f4
+    events:
+      - http:
+          path: api/ads
+          method: get
+          private: true
+
+  getById:
+    handler: getById.getById
+    events:
+      - http:
+          path: api/ads/{id}
+          method: get
+          private: true
+
+  dynamodbTrigger:
+    handler: trigger.trigger
+    vpc:
+      securityGroupIds:
+        - "Fn::GetAtt": AdsRedisSecurityGroup.GroupId
+      subnetIds:
+        - subnet-be77a8c3
+        - subnet-74c04639
+        - subnet-9f7611f4
+    events:
+      - stream:
+          type: dynamodb
+          batchSize: 1
+          startingPosition: LATEST
+          arn:
+            "Fn::GetAtt": AdsDynamoDBTable.StreamArn
+
+resources:
+ Resources:
+   AdsDynamoDBTable:
+     Type: AWS::DynamoDB::Table
+     Properties:
+       TableName: ${self:custom.tableName}
+       StreamSpecification:
+         StreamViewType: NEW_AND_OLD_IMAGES
+       ProvisionedThroughput: 
+         ReadCapacityUnits: 1
+         WriteCapacityUnits: 1
+       AttributeDefinitions:
+         - AttributeName: id
+           AttributeType: S
+       KeySchema:
+         - AttributeName: id
+           KeyType: HASH
+   AdsRedisSecurityGroup:
+     Type: AWS::EC2::SecurityGroup
+     Properties:
+       GroupDescription: For Ads Redis Cluster
+       SecurityGroupIngress:
+         - IpProtocol: tcp
+           FromPort: 6379
+           ToPort: 6379
+           CidrIp: 0.0.0.0/0
+   AdsRedisCacheCluster:
+     DependsOn: AdsRedisSecurityGroup
+     Type: AWS::ElastiCache::CacheCluster
+     Properties:
+       CacheNodeType: cache.t2.micro
+       Engine: redis
+       ClusterName: ads-redis
+       NumCacheNodes: 1
+       VpcSecurityGroupIds:
+         - "Fn::GetAtt": AdsRedisSecurityGroup.GroupId

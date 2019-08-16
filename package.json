@@ -1,0 +1,22 @@
+{
+  "name": "serverless-restful",
+  "version": "1.0.0",
+  "description": "",
+  "main": "create.js",
+  "dependencies": {
+    "aws-sdk": "^2.511.0",
+    "redis": "^2.8.0",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "ssh://github-akpersonal/ahmetkucukoglu/serverless-restful.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
