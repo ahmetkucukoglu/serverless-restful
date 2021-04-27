@@ -5,7 +5,7 @@
   "main": "create.js",
   "dependencies": {
     "aws-sdk": "^2.511.0",
-    "redis": "^2.8.0",
+    "redis": "^3.1.1",
     "uuid": "^3.3.2"
   },
   "devDependencies": {},
