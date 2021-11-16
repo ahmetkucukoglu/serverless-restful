@@ -4,7 +4,7 @@
   "description": "",
   "main": "create.js",
   "dependencies": {
-    "aws-sdk": "^2.511.0",
+    "aws-sdk": "^2.814.0",
     "redis": "^2.8.0",
     "uuid": "^3.3.2"
   },
